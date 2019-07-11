@@ -16,6 +16,7 @@ use std::thread;
 
 mod cmd;
 mod server;
+//mod bridge; // todo
 
 fn main() {
     let debug;
@@ -72,7 +73,7 @@ fn main() {
         }
     }
 
-    let webview = web_view::builder()
+    let mut webview = web_view::builder()
         .title("MyAppTitle")
         .content(content)
         .size(800, 600) // TODO:Resolution is fixed right now, change this later to be dynamic
@@ -89,18 +90,101 @@ fn main() {
                     Ok(command) => {
                         match command {
                             // definitions for your custom commands from Cmd here
-                            MyCustomCommand { argument } => {
+                            Message { data } => {
                                 //  your command code
-                                println!("{}", argument);
+                                println!("message received {}", data);
+
+                                let response = serde_json::json!({
+                                    "subtype": "TRANSMIT",
+                                    "message": "pong"
+                                });
+
+                                _webview.eval(&format!("bridge.receive({})", response.to_string()));
+                            },
+                            MessagePromise { id, data } => {
+                                //  your command code
+                                println!("messagePromise received {}", data);
+
+                                if data == "rejectme" {
+
+                                    let response = serde_json::json!({
+                                        "subtype": "PROMISE_RENDER",
+                                        "id": id,
+                                        "status": "REJECT",
+                                        "message": "I am programmed to reject this message"
+                                    });
+
+                                    _webview.eval(&format!("bridge.receive({})", response.to_string()));
+                                } else {
+
+                                    let reversed: String = data
+                                        .to_string()
+                                        .chars()
+                                        .rev()
+                                        .collect();
+
+                                    let response = serde_json::json!({
+                                        "subtype": "PROMISE_RENDER",
+                                        "id": id,
+                                        "status": "RESOLVE",
+                                        "message": reversed
+                                    });
+
+                                    _webview.eval(&format!("bridge.receive({})", response.to_string()));
+                                }
                             }
                         }
                     }
                 }
             }
-            
+
             Ok(())
         })
         .build().unwrap();
+
+
+
+    // let bridge = bridge::Bridge {
+    //     webview: &mut webview
+    // };
+
+    // let bridge = bridge::Bridge::new(&mut webview);
+
+    /*
+     Original intention is to create a bridge class that acts as an event emitter.
+     This would mimic the way that app-extension-electron-security works, but may
+     not be the best way to handle this in rust.
+
+     The reason why this was written like the below code in electron is to hide
+     from the user the underlying message structure that deals with resolving
+     or rejecting promises.
+
+     Potentially something like this (pseudo-code):
+
+     let bridge = bridge::Bridge::new(&webview);
+
+     bridge.add_listener("message", |message| {
+         println!("message received {}", message);
+         bridge.send("PONG");
+     })
+
+     bridge.on("messagePromise", |resolve, reject, message| {
+         println!("messagePromise received {}", message);
+         if message == "rejectme" {
+             reject("I am programmed to reject this message");
+         } else {
+             resolve(message.to_string().chars().rev().collect());
+         }
+     })
+
+     bridge.sendPromise("getroute").then(|message| {
+         println!("sendPromise was resolved {}", message);
+     }).catch(error => {
+         println!("sendPromise was rejected {}", error);
+     })
+
+     */
+
 
     webview.run().unwrap();
 }

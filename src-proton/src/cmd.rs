@@ -1,8 +1,12 @@
+use serde_json::Value;
+
 #[derive(Deserialize)]
 #[serde(tag = "cmd", rename_all = "camelCase")]
 pub enum Cmd {
     // your custom commands
     // multiple arguments are allowed
     // note that rename_all = "camelCase": you need to use "myCustomCommand" on JS
-    MyCustomCommand { argument: String }
+    // MyCustomCommand { argument: String }
+    Message { data: Value },
+    MessagePromise { id: String, data: Value }
 }
