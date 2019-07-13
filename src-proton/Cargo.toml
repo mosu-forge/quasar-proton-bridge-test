@@ -20,6 +20,9 @@ phf = "0.7.21"
 includedir = "0.5.0"
 proton = { path = "./lib" }
 
+[patch."https://github.com/Boscop/web-view"]
+web-view = { git = "https://github.com/mosu-forge/web-view", branch = "topic-bridge" }
+
 [build-dependencies]
 includedir_codegen = "0.5.0"
 

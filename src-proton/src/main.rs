@@ -36,12 +36,12 @@ fn main() {
             .author("Author")
             .about("About")
             .arg(Arg::with_name("url")
-                .short("u")
-                .long("url")
-                .value_name("URL")
-                .help("Loads the specified URL into webview")
-                .required(true)
-                .takes_value(true)
+                 .short("u")
+                 .long("url")
+                 .value_name("URL")
+                 .help("Loads the specified URL into webview")
+                 .required(true)
+                 .takes_value(true)
             );
 
         _matches = app.get_matches();
@@ -72,7 +72,7 @@ fn main() {
         }
     }
 
-    let webview = web_view::builder()
+    let mut webview = web_view::builder()
         .title("MyAppTitle")
         .content(content)
         .size(800, 600) // TODO:Resolution is fixed right now, change this later to be dynamic
@@ -97,10 +97,46 @@ fn main() {
                     }
                 }
             }
-            
+
             Ok(())
         })
         .build().unwrap();
+
+
+    // Send a simple string
+    webview.send(serde_json::json!("Hello From Rust"));
+
+    // Send a complex object
+    webview.send(serde_json::json!({
+        "name": "John Doe",
+        "age": 43,
+        "phones": [
+            "+44 1234567",
+            "+44 2345678"
+        ]
+    }));
+
+    // Listen for message
+    webview.emitter().on("message", |message| {
+        println!("message received {:?}", message.data);
+        (message.send)(serde_json::json!("pong"));
+    });
+
+    // Listen for messagePromise
+    webview.emitter().on("messagePromise", |message| {
+        println!("messagePromise received {:?}", message.data);
+        if message.data == "rejectme" {
+            (message.reject)(serde_json::json!("I am programmed to reject this message"));
+        } else {
+            let reversed: String = message.data
+                .to_string()
+                .chars()
+                .rev()
+                .collect();
+
+            (message.resolve)(serde_json::json!(reversed));
+        }
+    });
 
     webview.run().unwrap();
 }
